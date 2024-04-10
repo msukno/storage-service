@@ -1,12 +1,9 @@
 package com.springboot.podkaster.mp3cacheservice.service;
 
+import java.io.IOException;
+
 public interface S3Service {
-    void uploadFromFile(String filepath);
-}
-
-class S3ServiceBackblaze implements S3Service {
-
-    @Override
-    public void uploadFromFile(String filepath) {
-    }
+    void uploadFile(String filePath, String fileName);
+    String uploadUrl(int sourceId, String url) throws IOException;
+    void download(String fileName, String filePath);
 }

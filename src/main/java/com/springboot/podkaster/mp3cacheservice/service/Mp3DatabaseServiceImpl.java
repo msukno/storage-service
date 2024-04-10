@@ -8,21 +8,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-public interface Mp3DetailsService {
-    void create(Mp3Details mp3Details);
-    List<Mp3Details> getBySourceId(int sourceId);
-    List<Mp3Details> getAll();
-    void update(Mp3Details mp3Details);
-    void delete(int sourceId);
-    int deleteAll();
-}
-
 @Component
-class Mp3DetailsServiceImpl implements Mp3DetailsService{
+public class Mp3DatabaseServiceImpl implements Mp3DatabaseService {
     private Mp3DetailsDao mp3DetailsDao;
 
     @Autowired
-    public Mp3DetailsServiceImpl(Mp3DetailsDao mp3DetailsDao){
+    public Mp3DatabaseServiceImpl(Mp3DetailsDao mp3DetailsDao){
         this.mp3DetailsDao = mp3DetailsDao;
     }
 

@@ -29,7 +29,8 @@ dependencies {
 
 	// Added dependencies
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
-	runtimeOnly("com.mysql:mysql-connector-j")
+	//runtimeOnly("com.mysql:mysql-connector-j")
+	runtimeOnly("org.postgresql:postgresql")
 }
 
 tasks.withType<Test> {

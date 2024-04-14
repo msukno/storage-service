@@ -48,7 +48,7 @@ public class Mp3Controller {
 
     @GetMapping("/listen/{sourceId}")
     public void listenToSong(@PathVariable String sourceId, HttpServletResponse response, HttpServletRequest request){
-        try (ResponseInputStream<GetObjectResponse> downloadStream = backblazeService.getDownloadStream("abc", request)) {
+        try (ResponseInputStream<GetObjectResponse> downloadStream = backblazeService.getDownloadStream(sourceId, request)) {
             GetObjectResponse getObjectResponse = downloadStream.response();
             long contentLength = getObjectResponse.contentLength();
             String contentRange = getObjectResponse.contentRange();

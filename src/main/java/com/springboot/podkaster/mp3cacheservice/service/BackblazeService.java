@@ -1,7 +1,8 @@
 package com.springboot.podkaster.mp3cacheservice.service;
 
+import com.springboot.podkaster.mp3cacheservice.controller.LoggingInputStream;
 import com.springboot.podkaster.mp3cacheservice.data.accounts.backblaze.BackblazeAccount;
-import com.springboot.podkaster.mp3cacheservice.data.dao.Mp3DetailsDao;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -13,6 +14,9 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
+import software.amazon.awssdk.core.ResponseInputStream;
+
+
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,7 +32,7 @@ public class BackblazeService implements S3Service {
     @Autowired
     public BackblazeService(BackblazeAccount account){
         this.account = account;
-        client = S3Client.builder()
+        this.client = S3Client.builder()
                 .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create(
                         account.accountDetails.bucketAccessKey(),
                         account.accountDetails.bucketSecretAccessKey()
@@ -54,7 +58,7 @@ public class BackblazeService implements S3Service {
     }
 
     @Override
-    public String uploadUrl(int sourceId, String url) throws IOException {
+    public String uploadUrl(String sourceId, String url) throws IOException {
         String fileName = account.filenameFromId(sourceId);
         URL urlLink = new URL(url);
 
@@ -62,7 +66,8 @@ public class BackblazeService implements S3Service {
         connection.setRequestMethod("HEAD");
         long contentLength = connection.getContentLengthLong();
 
-        try (InputStream stream = urlLink.openStream()){
+        try (InputStream rawStream = urlLink.openStream();
+             LoggingInputStream stream = new LoggingInputStream(rawStream, contentLength)){
 
             RequestBody requestBody = RequestBody.fromInputStream(
                     stream,
@@ -97,5 +102,23 @@ public class BackblazeService implements S3Service {
 
         GetObjectResponse response = client.getObject(getObjectRequest, Paths.get(filePath));
         System.out.println("File %s download successful: ".formatted(fileName) + response);
+    }
+
+    @Override
+    public ResponseInputStream<GetObjectResponse> getDownloadStream(String fileName, HttpServletRequest request) {
+        String range = request.getHeader("Range");
+        String backblazeFileName = account.filenameFromId(fileName);
+        GetObjectRequest.Builder getObjectRequestBuilder = GetObjectRequest.builder()
+                .bucket(account.accountDetails.bucketName())
+                .key(backblazeFileName);
+
+        if (range != null) {
+            getObjectRequestBuilder.range(range);
+        }
+
+        GetObjectRequest getObjectRequest = getObjectRequestBuilder.build();
+        ResponseInputStream<GetObjectResponse> downloadStream = client.getObject(getObjectRequest);
+
+        return downloadStream;
     }
 }

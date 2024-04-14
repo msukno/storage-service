@@ -25,14 +25,14 @@ public class BackblazeAccount {
         );
     }
 
-    public String filenameFromId(int id){
-        return "bckblzFile-%s".formatted(id);
+    public String filenameFromId(String sourceId){
+        return "bckblzFile-%s".formatted(sourceId);
     }
 
-    public String filepathFromId(int id) {
+    public String filepathFromId(String sourceId) {
         String baseUri = accountDetails.bucketEndpoint()
                 .replace("https://", "https://"+accountDetails.bucketName()+".");
-        return baseUri + "/" + filenameFromId(id);
+        return baseUri + "/" + filenameFromId(sourceId);
     }
 
 }

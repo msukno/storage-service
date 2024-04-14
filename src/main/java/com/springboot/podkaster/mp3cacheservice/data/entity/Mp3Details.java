@@ -11,14 +11,14 @@ public class Mp3Details {
     @Column(name="id")
     int id;
     @Column(name="source_id")
-    int sourceId;
+    String sourceId;
 
     @Column(name="uri")
     String uri;
 
     public Mp3Details() {}
 
-    public Mp3Details(int sourceId, String uri) {
+    public Mp3Details(String sourceId, String uri) {
         this.sourceId = sourceId;
         this.uri = uri;
     }
@@ -27,11 +27,11 @@ public class Mp3Details {
         return id;
     }
 
-    public int getSourceId() {
+    public String getSourceId() {
         return sourceId;
     }
 
-    public void setSourceId(int sourceId) {
+    public void setSourceId(String sourceId) {
         this.sourceId = sourceId;
     }
 

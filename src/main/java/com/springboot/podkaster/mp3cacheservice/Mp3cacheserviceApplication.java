@@ -21,9 +21,10 @@ public class Mp3cacheserviceApplication {
 	@Bean
 	public CommandLineRunner commandLineRunner(Mp3DetailsDao mp3DetailsDao) {
 		return runner -> {
-/*			Mp3Details songDetails = new Mp3Details(22, "http://song_22");
-			mp3DetailsDao.create(songDetails);
-			System.out.println("Created: %s".formatted(songDetails));*/
+
+
+
+
 
 			//System.out.println("Database content: %s".formatted(mp3DetailsDao.getAll()));
 

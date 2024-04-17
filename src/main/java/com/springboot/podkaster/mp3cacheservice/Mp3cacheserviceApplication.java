@@ -22,9 +22,7 @@ public class Mp3cacheserviceApplication {
 	public CommandLineRunner commandLineRunner(Mp3DetailsDao mp3DetailsDao) {
 		return runner -> {
 
-
-
-
+			System.out.println("Hello world");
 
 			//System.out.println("Database content: %s".formatted(mp3DetailsDao.getAll()));
 

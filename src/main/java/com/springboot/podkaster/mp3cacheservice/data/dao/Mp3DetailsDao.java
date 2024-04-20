@@ -11,10 +11,10 @@ import java.util.List;
 
 public interface Mp3DetailsDao {
     void create(Mp3Details mp3Details);
-    List<Mp3Details> getBySourceId(String sourceId);
+    Mp3Details getByKey(String key);
     List<Mp3Details> getAll();
     void update(Mp3Details mp3Details);
-    void delete(String sourceId);
+    void delete(String key);
     int deleteAll();
 }
 
@@ -32,14 +32,10 @@ class Mp3DetailsDaoImpl implements Mp3DetailsDao{
     public void create(Mp3Details mp3Details) { entityManager.persist(mp3Details); }
 
     @Override
-    public List<Mp3Details> getBySourceId(String sourceId) {
-        TypedQuery<Mp3Details> theQuery = entityManager.createQuery(
-                "FROM Mp3Details details WHERE details.sourceId=:sourceId", Mp3Details.class
-        );
-        theQuery.setParameter("sourceId", sourceId);
-        return theQuery.getResultList();
+    public Mp3Details getByKey(String key) {
+        return entityManager.find(Mp3Details.class, key);
     }
-    
+
     @Override
     public List<Mp3Details> getAll() {
         TypedQuery<Mp3Details> theQuery = entityManager.createQuery("FROM Mp3Details", Mp3Details.class);
@@ -50,8 +46,8 @@ class Mp3DetailsDaoImpl implements Mp3DetailsDao{
     public void update(Mp3Details mp3Details) { entityManager.merge(mp3Details); }
 
     @Override
-    public void delete(String sourceId) {
-        Mp3Details mp3Details = entityManager.find(Mp3Details.class, sourceId);
+    public void delete(String key) {
+        Mp3Details mp3Details = entityManager.find(Mp3Details.class, key);
         entityManager.remove(mp3Details);
     }
 

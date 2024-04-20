@@ -15,8 +15,9 @@ import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.core.ResponseInputStream;
-
-
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -24,11 +25,14 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.nio.file.Paths;
+import java.time.Duration;
+
 
 @Component
 public class BackblazeService implements S3Service {
     BackblazeAccount account;
     S3Client client;
+    S3Presigner presigner;
     @Autowired
     public BackblazeService(BackblazeAccount account){
         this.account = account;
@@ -42,7 +46,20 @@ public class BackblazeService implements S3Service {
                 ))
                 .region(Region.of(account.accountDetails.region()))
                 .build();
+
+        this.presigner = S3Presigner.builder()
+                .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create(
+                        account.accountDetails.bucketAccessKey(),
+                        account.accountDetails.bucketSecretAccessKey()
+                )))
+                .endpointOverride(URI.create(
+                        account.accountDetails.bucketEndpoint()
+                ))
+                .region(Region.of(account.accountDetails.region()))
+                .build();
+
     }
+
     @Override
     public void uploadFile(String filePath, String fileName) {
         PutObjectRequest putObjectRequest = PutObjectRequest.builder()
@@ -58,8 +75,32 @@ public class BackblazeService implements S3Service {
     }
 
     @Override
-    public String uploadUrl(String sourceId, String url) throws IOException {
-        String fileName = account.filenameFromId(sourceId);
+    public String generatePresignedUrl(String fileName) {
+        GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                .bucket(account.accountDetails.bucketName())
+                .key(fileName)
+                .build();
+
+        GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
+                .signatureDuration(Duration.ofMinutes(10))
+                .getObjectRequest(getObjectRequest)
+                .build();
+
+        PresignedGetObjectRequest presignedRequest = presigner.presignGetObject(presignRequest);
+
+        // Extract the URL
+        URL url = presignedRequest.url();
+
+        String urlString = url.toExternalForm();
+
+        System.out.println("Generated presign Url: " + urlString);
+
+        return urlString;
+    }
+
+    @Override
+    public String uploadUrl(String filename, String url) throws IOException{
+        //String fileName = account.filenameFromId(sourceId);
         URL urlLink = new URL(url);
 
         HttpURLConnection connection = (HttpURLConnection) urlLink.openConnection();
@@ -67,7 +108,7 @@ public class BackblazeService implements S3Service {
         long contentLength = connection.getContentLengthLong();
 
         try (InputStream rawStream = urlLink.openStream();
-             LoggingInputStream stream = new LoggingInputStream(rawStream, contentLength)){
+             LoggingInputStream stream = new LoggingInputStream(rawStream, contentLength)) {
 
             RequestBody requestBody = RequestBody.fromInputStream(
                     stream,
@@ -76,7 +117,7 @@ public class BackblazeService implements S3Service {
 
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                     .bucket(account.accountDetails.bucketName())
-                    .key(fileName)
+                    .key(filename)
                     .build();
 
             PutObjectResponse response = client.putObject(
@@ -85,12 +126,9 @@ public class BackblazeService implements S3Service {
             );
 
             System.out.println("File upload successful: " + response);
-
-        } catch (IOException e) {
-            System.out.println("File upload failed");
-            e.printStackTrace();
         }
-        return account.filepathFromId(sourceId);
+
+        return account.filepathFromFilename(filename);
     }
 
     @Override

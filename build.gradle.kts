@@ -29,6 +29,7 @@ dependencies {
 
 	// Added dependencies
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+	implementation("io.github.cdimascio:dotenv-java:3.0.0")
 	//runtimeOnly("com.mysql:mysql-connector-j")
 	runtimeOnly("org.postgresql:postgresql")
 }

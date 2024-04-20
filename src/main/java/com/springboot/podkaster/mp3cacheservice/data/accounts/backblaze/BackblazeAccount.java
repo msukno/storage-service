@@ -35,4 +35,10 @@ public class BackblazeAccount {
         return baseUri + "/" + filenameFromId(sourceId);
     }
 
+    public String filepathFromFilename(String filename) {
+        String baseUri = accountDetails.bucketEndpoint()
+                .replace("https://", "https://"+accountDetails.bucketName()+".");
+        return baseUri + "/" + filename;
+    }
+
 }

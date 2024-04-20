@@ -8,8 +8,12 @@ import java.io.IOException;
 
 public interface S3Service {
     void uploadFile(String filePath, String fileName);
-    String uploadUrl(String sourceId, String url) throws IOException;
+
+    String uploadUrl(String filename, String url) throws IOException;
+
     void download(String fileName, String filePath);
+
+    String generatePresignedUrl(String fileName);
 
     ResponseInputStream<GetObjectResponse> getDownloadStream(String fileName, HttpServletRequest request);
 

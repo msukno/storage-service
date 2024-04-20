@@ -23,9 +23,10 @@ public class Mp3DatabaseServiceImpl implements Mp3DatabaseService {
         mp3DetailsDao.create(mp3Details);
     }
 
+
     @Override
-    public List<Mp3Details> getBySourceId(String sourceId) {
-        return mp3DetailsDao.getBySourceId(sourceId);
+    public Mp3Details getByKey(String key) {
+        return mp3DetailsDao.getByKey(key);
     }
 
     @Override
@@ -41,8 +42,8 @@ public class Mp3DatabaseServiceImpl implements Mp3DatabaseService {
 
     @Override
     @Transactional
-    public void delete(String sourceId) {
-        mp3DetailsDao.delete(sourceId);
+    public void delete(String sourceKey) {
+        mp3DetailsDao.delete(sourceKey);
     }
 
     @Override

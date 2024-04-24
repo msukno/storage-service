@@ -43,7 +43,7 @@ public class LoggingInputStream extends InputStream {
     private void logProgress(long bytesReadIncrement) {
         bytesRead += bytesReadIncrement;
         double percentage = ((double) bytesRead / totalBytes) * 100;
-        redisService.setValue(filename, String.format("%.2f%%", percentage));
+//        redisService.setValue(filename, String.format("%.2f%%", percentage));
         System.out.printf("Uploaded %d bytes %d\n", bytesRead, totalBytes);
         System.out.printf("Uploaded %d bytes (%.2f%%)\n", bytesRead, percentage);
     }

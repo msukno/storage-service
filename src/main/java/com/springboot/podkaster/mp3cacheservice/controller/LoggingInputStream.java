@@ -1,16 +1,25 @@
 package com.springboot.podkaster.mp3cacheservice.controller;
 
+import com.springboot.podkaster.mp3cacheservice.service.RedisService;
+import org.springframework.beans.factory.annotation.Autowired;
+
 import java.io.IOException;
 import java.io.InputStream;
 
 public class LoggingInputStream extends InputStream {
     private final InputStream wrappedStream;
     private final long totalBytes;
+    private String filename;
+
+    private RedisService redisService;
     private long bytesRead = 0;
 
-    public LoggingInputStream(InputStream wrappedStream, long totalBytes) {
+
+    public LoggingInputStream(InputStream wrappedStream, long totalBytes, String filename, RedisService redisService) {
         this.wrappedStream = wrappedStream;
         this.totalBytes = totalBytes;
+        this.redisService = redisService;
+        this.filename = filename;
     }
 
     @Override
@@ -34,12 +43,18 @@ public class LoggingInputStream extends InputStream {
     private void logProgress(long bytesReadIncrement) {
         bytesRead += bytesReadIncrement;
         double percentage = ((double) bytesRead / totalBytes) * 100;
+        redisService.setValue(filename, String.format("%.2f%%", percentage));
+        System.out.printf("Uploaded %d bytes %d\n", bytesRead, totalBytes);
         System.out.printf("Uploaded %d bytes (%.2f%%)\n", bytesRead, percentage);
     }
-
     @Override
     public void close() throws IOException {
-        wrappedStream.close();
+        try {
+            wrappedStream.close();
+        } finally {
+            // Remove the progress from Redis once upload is complete
+            redisService.removeValue(filename);
+        }
     }
 
     // Implement other required methods by delegating to wrappedStream

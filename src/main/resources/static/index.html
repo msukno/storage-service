@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+</head>
+<body>
+<h2>WebSocket Test</h2>
+<pre id="lastMessage">Waiting for updates...</pre>
+<script>
+    var stompClient = null;
+
+    function connect() {
+        var socket = new WebSocket('ws://localhost:8080/upload-progress');
+        stompClient = Stomp.over(socket);
+        stompClient.connect({}, function(frame) {
+            console.log('Connected: ' + frame);
+            stompClient.subscribe('/topic/progress', function(message) {
+                console.log('Received:', message.body);  // Log every message to the console
+                updateLastMessage(message.body);
+            });
+        });
+    }
+
+    function updateLastMessage(jsonString) {
+        try {
+            const data = JSON.parse(jsonString);
+            const prettyPrintedJson = JSON.stringify(data, null, 2); // Indent with 2 spaces
+            document.getElementById('lastMessage').textContent = prettyPrintedJson;
+        } catch (e) {
+            console.error('Error parsing JSON!', e);
+        }
+    }
+
+    connect();
+</script>
+</body>
+</html>

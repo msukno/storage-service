@@ -8,7 +8,7 @@ group = "com.springboot.podkaster"
 version = "0.0.1-SNAPSHOT"
 
 java {
-	sourceCompatibility = JavaVersion.VERSION_21
+	sourceCompatibility = JavaVersion.VERSION_19
 }
 
 repositories {
@@ -24,6 +24,10 @@ dependencies {
 	//aws s3
 	implementation(platform("software.amazon.awssdk:bom:2.21.1"))
 	implementation("software.amazon.awssdk:s3")
+
+	// WebSocket and Redis
+	implementation("org.springframework.boot:spring-boot-starter-websocket")
+	implementation("org.springframework.boot:spring-boot-starter-data-redis")
 
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 

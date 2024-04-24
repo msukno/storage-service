@@ -4,6 +4,7 @@ import com.springboot.podkaster.mp3cacheservice.controller.LoggingInputStream;
 import com.springboot.podkaster.mp3cacheservice.data.accounts.backblaze.BackblazeAccount;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
@@ -24,8 +25,11 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
+
 
 
 @Component
@@ -33,8 +37,10 @@ public class BackblazeService implements S3Service {
     BackblazeAccount account;
     S3Client client;
     S3Presigner presigner;
+
+    RedisService redisService;
     @Autowired
-    public BackblazeService(BackblazeAccount account){
+    public BackblazeService(BackblazeAccount account, RedisService redisService){
         this.account = account;
         this.client = S3Client.builder()
                 .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create(
@@ -58,17 +64,18 @@ public class BackblazeService implements S3Service {
                 .region(Region.of(account.accountDetails.region()))
                 .build();
 
+        this.redisService = redisService;
     }
 
     @Override
-    public void uploadFile(String filePath, String fileName) {
+    public void uploadFile(String url, String fileName) {
         PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                 .bucket(account.accountDetails.bucketName())
                 .key(fileName)
                 .build();
 
         PutObjectResponse response = client.putObject(putObjectRequest,
-                RequestBody.fromFile(Paths.get(filePath)));
+                RequestBody.fromFile(Paths.get(url)));
 
 
         System.out.println("File upload successful: " + response);
@@ -98,38 +105,81 @@ public class BackblazeService implements S3Service {
         return urlString;
     }
 
+
+
+//    @Override
+//    public String uploadUrl(String url, String filename) throws IOException {
+//        URL urlLink = new URL(url);
+//
+//        HttpURLConnection connection = (HttpURLConnection) urlLink.openConnection();
+//        connection.setRequestMethod("GET");
+//
+//        // Ensure we get the right content length and manage resources correctly
+//        connection.connect();
+//        long contentLength = connection.getContentLengthLong();
+//        if (contentLength == -1) {
+//            throw new IOException("Cannot get content length from the URL");
+//        }
+//
+//        try (InputStream rawStream = connection.getInputStream()) {
+//            LoggingInputStream stream = new LoggingInputStream(rawStream, contentLength,filename, redisService);
+//            RequestBody requestBody = RequestBody.fromInputStream(stream, stream.available());
+//
+//            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+//                    .bucket(account.accountDetails.bucketName())
+//                    .contentLength(contentLength)
+//                    .key(filename)
+//                    .build();
+//
+//            PutObjectResponse response = client.putObject(putObjectRequest, requestBody);
+//
+//            System.out.println("File upload successful: " + response);
+//        } finally {
+//            connection.disconnect();
+//        }
+//
+//        return account.filepathFromFilename(filename);
+//    }
+
     @Override
-    public String uploadUrl(String filename, String url) throws IOException{
-        //String fileName = account.filenameFromId(sourceId);
+    public String uploadUrl(String url, String sourceKey, String filename) throws IOException {
         URL urlLink = new URL(url);
 
         HttpURLConnection connection = (HttpURLConnection) urlLink.openConnection();
-        connection.setRequestMethod("HEAD");
+        connection.setRequestMethod("GET");
+
+        // Ensure we get the right content length and manage resources correctly
+        connection.connect();
         long contentLength = connection.getContentLengthLong();
+        if (contentLength == -1) {
+            throw new IOException("Cannot get content length from the URL");
+        }
 
-        try (InputStream rawStream = urlLink.openStream();
-             LoggingInputStream stream = new LoggingInputStream(rawStream, contentLength)) {
 
-            RequestBody requestBody = RequestBody.fromInputStream(
-                    stream,
-                    contentLength
-            );
+
+
+        try (InputStream inputStream = urlLink.openStream();
+             LoggingInputStream stream = new LoggingInputStream(inputStream, contentLength, sourceKey, redisService)) {
+
+            RequestBody requestBody = RequestBody.fromInputStream(stream, contentLength);
 
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                     .bucket(account.accountDetails.bucketName())
+                    .contentLength(contentLength)
                     .key(filename)
                     .build();
 
-            PutObjectResponse response = client.putObject(
-                    putObjectRequest,
-                    requestBody
-            );
+            PutObjectResponse response = client.putObject(putObjectRequest, requestBody);
 
             System.out.println("File upload successful: " + response);
+        } finally {
+            connection.disconnect();
         }
 
         return account.filepathFromFilename(filename);
     }
+
+
 
     @Override
     public void download(String fileName, String filePath) {

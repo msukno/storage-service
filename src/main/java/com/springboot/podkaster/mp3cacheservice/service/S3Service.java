@@ -5,11 +5,12 @@ import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
 import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
 
 public interface S3Service {
     void uploadFile(String filePath, String fileName);
 
-    String uploadUrl(String filename, String url) throws IOException;
+    String uploadUrl(String url, String sourceId, String fileName) throws IOException;
 
     void download(String fileName, String filePath);
 

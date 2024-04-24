@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.apache.catalina.connector.ClientAbortException;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -20,19 +21,23 @@ import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
 import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 
 @RestController
 @RequestMapping("/api")
 public class Mp3Controller {
+
+    private Executor taskExecutor;
     private Mp3DatabaseService mp3DatabaseService;
     private S3Service backblazeService;
     @Autowired
-    public Mp3Controller(Mp3DatabaseService mp3DatabaseService, S3Service backblazeService){
+    public Mp3Controller(Mp3DatabaseService mp3DatabaseService, S3Service backblazeService, @Qualifier("taskExecutor") Executor taskExecutor){
         this.mp3DatabaseService = mp3DatabaseService;
         this.backblazeService = backblazeService;
+        this.taskExecutor = taskExecutor;
     }
-
     @GetMapping("/mp3/{sourceId}")
     public Mp3Details findSong(@PathVariable String sourceId){
         Mp3Details results = mp3DatabaseService.getByKey(sourceId);
@@ -40,27 +45,33 @@ public class Mp3Controller {
     }
 
     @PostMapping("/mp3")
-    public String uploadToBackblaze(@RequestBody UploadRequest request) {
+    public ResponseEntity<String> uploadToBackblaze(@RequestBody UploadRequest request) {
         Mp3Details entry = mp3DatabaseService.getByKey(request.sourceKey());
-        if(entry != null){
-            return "Entry already exists";
+        if (entry != null) {
+            return ResponseEntity.badRequest().body("Entry already exists");
         }
-        else{
             try {
-                entry = new Mp3Details(request.sourceKey(), "www.example.com");
-                mp3DatabaseService.create(entry);
-                String uri = backblazeService.uploadUrl(entry.getFilename(), request.url());
-                entry.setUri(uri);
-                mp3DatabaseService.update(entry);
-                System.out.println("entry created!!");
-                return "entry created: " + entry;
-            }catch (Exception e){
-                mp3DatabaseService.delete(entry.getSourceKey());
-                return "Error while uploading URL: ";
+                CompletableFuture.runAsync(() -> {
+                    startUpload(request.url(), request.sourceKey());
+                }, taskExecutor);
+                return ResponseEntity.ok("Upload started for: " + request.sourceKey());
+            } catch (Exception e) {
+                System.out.println("Error while starting uploading URL: " + e.getMessage());
+                return ResponseEntity.ok("Error while starting uploading URL: " + request.sourceKey());
             }
         }
-    }
 
+    private void startUpload(String url, String sourceKey) {
+        try {
+            Mp3Details newEntry = new Mp3Details(sourceKey, url);
+            String fileName =  newEntry.getFilename();
+            String uploadedUrl = backblazeService.uploadUrl(url, sourceKey, fileName);
+            newEntry.setUri(uploadedUrl);
+            mp3DatabaseService.create(newEntry);
+        } catch (Exception e) {
+            System.out.println("Error while uploading URL: " + e.getMessage());
+        }
+    }
 
     @GetMapping("/listen/{sourceId}")
     public void listenToSong(@PathVariable String sourceId, HttpServletResponse response, HttpServletRequest request){
@@ -85,6 +96,11 @@ public class Mp3Controller {
     @GetMapping("/presigned/{sourceKey}")
     public String getPresignedUrl(@PathVariable String sourceKey){
         Mp3Details result = mp3DatabaseService.getByKey(sourceKey);
+
+        if(result == null){
+            return null;
+        }
+
         String presignedUrl = backblazeService.generatePresignedUrl(result.getFilename());
         return presignedUrl;
     }
